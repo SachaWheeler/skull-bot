@@ -15,11 +15,11 @@ float tempLeft = 0;             // Variable to hold temperature in Celcius for l
 float tempRight = 0;             // Variable to hold temperature in Celcius for right eye
 
 // neck
-int neckServoPin = 6;
+int neckServoPin = 9;
 Servo servo;
 int angle = 0;   // servo position in degrees
 int newangle;
-int sweepUnit = 2;
+int sweepUnit = 0.2;
 int sweepDelay = 15;
 int sweep;
 
@@ -31,6 +31,18 @@ void setup()
   PORTC = (1 << PORTC4) | (1 << PORTC5);    // Enable pullups.
 
   servo.attach(neckServoPin);
+  servo.write(45);  // Turn Servo Left to 45 degrees
+  delay(1000);          // Wait 1 second
+  servo.write(0);   // Turn Servo Left to 0 degrees
+  delay(1000);          // Wait 1 second
+  servo.write(90);  // Turn Servo back to center position (90 degrees)
+  delay(1000);          // Wait 1 second
+  servo.write(135); // Turn Servo Right to 135 degrees
+  delay(1000);          // Wait 1 second
+  servo.write(180); // Turn Servo Right to 180 degrees
+  delay(1000);          // Wait 1 second
+  servo.write(90);  // Turn Servo back to center position (90 degrees)
+  delay(1000);          // Wait 1 second 
 }
 
 void loop()
@@ -61,10 +73,12 @@ void loop()
   // Serial.print("angle: ");
   // Serial.println(newangle);
 
+/*
   if(newangle != angle){
     servo.write(newangle);
     angle = newangle;
   }
+  */
 
   delay(1000);                         // Wait before printing again.
 }
