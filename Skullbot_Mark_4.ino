@@ -15,13 +15,31 @@ float tempLeft = 0;             // Variable to hold temperature in Celcius for l
 float tempRight = 0;             // Variable to hold temperature in Celcius for right eye
 
 // neck
-int neckServoPin = 9;
-Servo servo;
-int angle = 0;   // servo position in degrees
-int newangle;
+Servo rotateServo;
+int rotateServoPin = 9;
+int rotateAngle = 0;   // servo position in degrees
+int newRotateAngle;
 int sweepUnit = 0.2;
 int sweepDelay = 15;
 int sweep;
+int rotateLeftLimit;  // how far left and right
+int rotateRightLimit;
+int rotateCentre;  // centre point
+
+int rotateTempMargin = 10;
+
+Servo tiltServo;
+int tiltServoPin = 8;
+int tiltAngle = 0;   // servo position in degrees
+int newTiltAngle;
+int tiltSweepUnit = 0.2;
+int tiltSweepDelay = 15;
+int tiltSweep;
+int tiltFrontLimit; // how far front and back
+int tiltBackLimit;
+int tiltCentre; // centre point
+
+int aveTemp; // the average of the two eyes
 
 void setup()
 {
@@ -30,57 +48,108 @@ void setup()
   i2c_init();                               // Initialise the i2c bus.
   PORTC = (1 << PORTC4) | (1 << PORTC5);    // Enable pullups.
 
-  servo.attach(neckServoPin);
-  servo.write(45);  // Turn Servo Left to 45 degrees
-  delay(1000);          // Wait 1 second
-  servo.write(0);   // Turn Servo Left to 0 degrees
-  delay(1000);          // Wait 1 second
-  servo.write(90);  // Turn Servo back to center position (90 degrees)
-  delay(1000);          // Wait 1 second
-  servo.write(135); // Turn Servo Right to 135 degrees
-  delay(1000);          // Wait 1 second
-  servo.write(180); // Turn Servo Right to 180 degrees
-  delay(1000);          // Wait 1 second
-  servo.write(90);  // Turn Servo back to center position (90 degrees)
-  delay(1000);          // Wait 1 second 
+  rotateServo.attach(rotateServoPin);
+  tiltServo.attach(tiltServoPin);
+
+  calibrateServos();
+}
+
+void calibrateServos()
+{
+  Serial.print("calibbrating\n");
+  Serial.print("rotating\n");
+  for (int x = rotateLeftLimit; x <= rotateRightLimit; x += 5){
+    rotateServo.write(x);
+    Serial.print(x);
+    Serial.print("\n");
+    delay(1000);
+  }
+  rotateServo.write(rotateCentre);
+
+  Serial.print("tilting\n");
+  for (int y = tiltFrontLimit; y <= tiltBackLimit; y += 10){
+    tiltServo.write(y);
+    Serial.print(y);
+    Serial.print("\n");
+    delay(1000);
+  }
+  tiltServo.write(tiltCentre);
 }
 
 void loop()
 {
-  tempLeft = temperatureCelcius(device1Address);// Read's data from MLX90614
-  tempRight = temperatureCelcius(device2Address);// with the given address,
+  // temperature
+  tempLeft = temperatureCelcius(device1Address);  // Read's data from MLX90614
+  tempRight = temperatureCelcius(device2Address); // with the given address,
 
   Serial.print("Left: ");
   Serial.print(tempLeft);
   Serial.print(" Right: ");
   Serial.println(tempRight);
+  Serial.print("\n");
 
-  if(tempLeft > tempRight){
-    newangle = angle - sweepUnit;
-    if(newangle < 0){
-      newangle = 0;
-    }else{
-      Serial.println("look left");
-    }
-  }else{
-    newangle = angle + sweepUnit;
-    if(newangle > 180){
-      newangle = 180;
-    }else{
-      Serial.println("look right");
+  // for testing purposes
+  return;
+
+  // rotate
+  int tempDifference = tempLeft - tempRight;          //  VERIFY this
+  if(tempDifference < 0) tempDifference = -tempDifference;
+  
+  if(tempDifference >= rotateTempMargin){          //  VERIFY this
+    if(tempLeft > tempRight){          //  VERIFY this
+      newRotateAngle = rotateAngle - sweepUnit;          //  VERIFY this
+      if(newRotateAngle < rotateLeftLimit){          //  VERIFY this
+        newRotateAngle = rotateLeftLimit;
+      }else{
+        Serial.println("look left\n");
+      }
+    }else if(tempLeft < tempRight){          //  VERIFY this
+      newRotateAngle = rotateAngle + sweepUnit;          //  VERIFY this
+      if(newRotateAngle > rotateLeftLimit){          //  VERIFY this
+        newRotateAngle = rotateRightLimit;
+      }else{
+        Serial.println("look right\n");
+      }
     }
   }
-  // Serial.print("angle: ");
-  // Serial.println(newangle);
-
-/*
-  if(newangle != angle){
-    servo.write(newangle);
-    angle = newangle;
+ 
+  Serial.print("rotateAngle: ");
+  Serial.println(newRotateAngle);
+  Serial.print("\n");
+  
+  if(newRotateAngle != rotateAngle){
+    rotateServo.write(newRotateAngle);
+    rotateAngle = newRotateAngle;
   }
-  */
 
-  delay(1000);                         // Wait before printing again.
+  // tilt
+  int newAveTemp = (tempLeft + tempRight) / 2;
+  if(newAveTemp > aveTemp){ // look up
+    newTiltAngle = tiltAngle + tiltSweepUnit;
+    if(newTiltAngle < tiltFrontLimit){          //  VERIFY this
+      newTiltAngle = tiltBackLimit;
+    }else{
+      Serial.println("look up");
+    }
+  }else if(newAveTemp < aveTemp){          //  VERIFY this
+    newTiltAngle = tiltAngle - sweepUnit;
+    if(newTiltAngle > tiltBackLimit){
+      newTiltAngle = tiltBackLimit;
+    }else{
+      Serial.println("look down");
+    }
+  }
+  
+  Serial.print("tileAngle: ");
+  Serial.println(newTiltAngle);
+
+  if(newTiltAngle != tiltAngle){
+    tiltServo.write(newTiltAngle);
+    tiltAngle = newTiltAngle;
+    aveTemp = newAveTemp;
+  }
+
+  delay(1000);
 }
 
 float temperatureCelcius(int address) {
