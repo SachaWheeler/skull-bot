@@ -17,46 +17,53 @@ float tempRight = 0;             // Variable to hold temperature in Celcius for 
 // neck
 Servo rotateServo;
 int rotateServoPin = 9;
-int rotateAngle = 0;   // servo position in degrees
+int sweepUnit = 0.2;           //  VERIFY this
+int rotateLeftLimit   = 170;
+int rotateRightLimit  = 90;           //  VERIFY this
+int rotateCentre      = 120;
+int rotateAngle = rotateCentre;        // initial servo position in degrees
 int newRotateAngle;
-int sweepUnit = 0.2;
-int sweepDelay = 15;
-int sweep;
-int rotateLeftLimit;  // how far left and right
-int rotateRightLimit;
-int rotateCentre;  // centre point
 
-int rotateTempMargin = 10;
+int rotateTempMargin = 10;            //  VERIFY this
 
 Servo tiltServo;
 int tiltServoPin = 8;
-int tiltAngle = 0;   // servo position in degrees
+int tiltSweepUnit = 0.2;           //  VERIFY this
+int tiltFrontLimit  = 60;
+int tiltBackLimit   = 100;          //  VERIFY this
+int tiltCentre      = 55;
+int tiltAngle = tiltCentre;         // initial servo position in degrees
 int newTiltAngle;
-int tiltSweepUnit = 0.2;
-int tiltSweepDelay = 15;
-int tiltSweep;
-int tiltFrontLimit; // how far front and back
-int tiltBackLimit;
-int tiltCentre; // centre point
 
 int aveTemp; // the average of the two eyes
 
 void setup()
 {
   Serial.begin(9600);           // Start serial communication at 9600bps.
-  Serial.print("initialising\n");
+  Serial.print("init\n");
   i2c_init();                               // Initialise the i2c bus.
   PORTC = (1 << PORTC4) | (1 << PORTC5);    // Enable pullups.
 
   rotateServo.attach(rotateServoPin);
   tiltServo.attach(tiltServoPin);
 
-  calibrateServos();
+  rotateServo.write(rotateCentre);
+  tiltServo.write(tiltCentre);
+
+  // calibrateServos();
+ 
+}
+
+void testServos(){
+ rotateServo.write(rotateRightLimit);
+ tiltServo.write(tiltBackLimit);
+ delay(1000);
 }
 
 void calibrateServos()
 {
-  Serial.print("calibbrating\n");
+  Serial.print("calibbrating\n\n");
+
   Serial.print("rotating\n");
   for (int x = rotateLeftLimit; x <= rotateRightLimit; x += 5){
     rotateServo.write(x);
@@ -64,7 +71,11 @@ void calibrateServos()
     Serial.print("\n");
     delay(1000);
   }
+  delay(1000);
+  Serial.print("centring\n");
   rotateServo.write(rotateCentre);
+
+  return; // testing
 
   Serial.print("tilting\n");
   for (int y = tiltFrontLimit; y <= tiltBackLimit; y += 10){
@@ -73,14 +84,18 @@ void calibrateServos()
     Serial.print("\n");
     delay(1000);
   }
+  delay(1000);
+  Serial.print("centring\n");
   tiltServo.write(tiltCentre);
+
+  Serial.print("calibration finished...\n");
 }
 
 void loop()
 {
   // temperature
-  tempLeft = temperatureCelcius(device1Address);  // Read's data from MLX90614
-  tempRight = temperatureCelcius(device2Address); // with the given address,
+  tempLeft = temperatureCelcius(device1Address);
+  tempRight = temperatureCelcius(device2Address);
 
   Serial.print("Left: ");
   Serial.print(tempLeft);
@@ -88,8 +103,7 @@ void loop()
   Serial.println(tempRight);
   Serial.print("\n");
 
-  // for testing purposes
-  return;
+  delay(1000); return; // for testing purposes
 
   // rotate
   int tempDifference = tempLeft - tempRight;          //  VERIFY this
